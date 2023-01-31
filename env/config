@@ -1,0 +1,14 @@
+[server]
+port=3030
+
+[mail]
+driver=smtp
+host=mail.mailtrap.io
+port=3453
+username=dsnfskfs
+password=smfdlfdf
+enctype=tls
+
+[session]
+lifetime=24
+idletime=20
