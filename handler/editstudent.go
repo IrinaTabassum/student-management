@@ -4,29 +4,24 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
+
 	"text/template"
 
 	"github.com/go-chi/chi"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/justinas/nosurf"
 )
 
 func (h Handler) EditStudent(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	sID, err := strconv.Atoi(id)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	SL, err := getStudentsList()
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
+
 	var editStudent Student
-	for _, student := range SL.Students {
-		if student.ID == sID {
-			editStudent = student
-			break
-		}
+	const editStudentQuery = `SELECT * FROM students WHERE id=$1 AND deleted_at IS NULL`
+	if err := h.db.Get(&editStudent, editStudentQuery, id); err != nil {
+		log.Fatal(err)
 	}
+
 	editStudent.CSRFToken = nosurf.Token(r)
 	pareseEditUserTemplate(w, editStudent)
 
@@ -41,57 +36,57 @@ func (h Handler) UpdateStudent(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("%#v", err)
 	}
 
-	name := r.FormValue("name")
-	studentid := r.FormValue("sid")
-	bangtla, err := strconv.Atoi(r.FormValue("bang"))
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	english, err := strconv.Atoi(r.FormValue("engl"))
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	math, err := strconv.Atoi(r.FormValue("math"))
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
+	editstudent := Student{ID: sID}
 
-	type ErrorMessage struct {
-		Name string
-		Role string
-	}
-	if studentid == "" {
-		pareseCreateStudentTemplate(w, ErrorMessage{Role: "The role field is required."})
-		return
-	}
-	if name == "" {
-		pareseCreateStudentTemplate(w, ErrorMessage{Name: "The name field is required."})
-		return
-	}
-	studentsList, err := getStudentsList()
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	for key, student := range studentsList.Students {
-		if student.ID == sID {
-			studentsList.Students[key].Name = name
-			studentsList.Students[key].StudentId = studentid
-			studentsList.Students[key].Subject.Bangla = bangtla
-			studentsList.Students[key].Subject.English = english
-			studentsList.Students[key].Subject.Math = math
-		}
-	}
-
-	if err := writeUsersToFile(studentsList); err != nil {
+	if err := h.decoder.Decode(&editstudent, r.PostForm); err != nil {
 		log.Fatal(err)
 	}
-	http.Redirect(w, r, "/student/list", http.StatusSeeOther)
+	
+	log.Printf("form: %+v \n", editstudent)
+
+	if err := editstudent.Validate(); err != nil {
+		if vErr, ok := err.(validation.Errors); ok {
+			newErrs := make(map[string]error)
+			for key, val := range vErr {
+				newErrs[strings.Title(key)] = val
+			}
+			editstudent.FormError = newErrs
+		}
+		pareseCreateStudentTemplate(w, editstudent)
+		return
+	}
+	const updatStudenrQuery =`
+	UPDATE students SET
+		first_name = :first_name,
+		last_name = :last_name,
+		status = :status
+	WHERE id = :id AND deleted_at IS NULL;
+	`
+	stud, err := h.db.PrepareNamed(updatStudenrQuery)
+	if err != nil{
+		log.Fatal(err)
+	}
+	res, err := stud.Exec(editstudent)
+	if err != nil{
+		log.Fatal(err)
+	}
+	rocount, err := res.RowsAffected()
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	if rocount >0 {
+		http.Redirect(w, r, "/student/list", http.StatusSeeOther)
+		return
+	}
+
+	pareseCreateStudentTemplate(w, editstudent)
 
 }
 func pareseEditUserTemplate(w http.ResponseWriter, data any) {
-	t, err := template.ParseFiles("templats/edit-student.html")
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	t.Execute(w, data)
+	t := template.New("edit Student")
+	t = template.Must(t.ParseFiles("templats/admin/edit-student.html", "templats/admin/_form.html"))
+
+	t.ExecuteTemplate(w, "edit-student.html", data)
+
 }

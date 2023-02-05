@@ -1,5 +1,5 @@
 [server]
-port=3030
+port=3000
 
 [mail]
 driver=smtp
@@ -12,3 +12,11 @@ enctype=tls
 [session]
 lifetime=24
 idletime=20
+
+[database]
+host=127.0.0.1
+port=5432
+dbname=smanagement
+user=postgres
+password=1234
+sslmode=disable

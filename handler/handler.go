@@ -2,23 +2,28 @@ package handler
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-playground/form"
+	"github.com/jmoiron/sqlx"
 )
 
 type Handler struct {
 	sessionManager *scs.SessionManager
 	decoder        *form.Decoder
+	db             *sqlx.DB
 }
 
-func NewHandler(sm *scs.SessionManager, formDecoder *form.Decoder) *chi.Mux {
+func NewHandler(sm *scs.SessionManager, formDecoder *form.Decoder, db *sqlx.DB) *chi.Mux {
 	h := &Handler{
 		sessionManager: sm,
 		decoder:        formDecoder,
+		db:             db,
 	}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -29,11 +34,18 @@ func NewHandler(sm *scs.SessionManager, formDecoder *form.Decoder) *chi.Mux {
 	r.Use(Method)
 
 	r.Get("/", h.Home)
-	r.Get("/login", h.Login)
-	r.Post("/login", h.LoginPostHandler)
-
+	r.Group(func(r chi.Router) {
+		r.Use(sm.LoadAndSave)
+		r.Get("/login", h.Login)
+		r.Post("/login", h.LoginPostHandler)
+	})
+	workDir, _ := os.Getwd()
+	filesDir := http.Dir(filepath.Join(workDir, "assets"))
+	r.Handle("/static/*", http.StripPrefix("/static", http.FileServer(filesDir)))
 	r.Route("/student", func(r chi.Router) {
+		r.Use(sm.LoadAndSave)
 		r.Use(h.Authentication)
+		
 		r.Get("/list", h.Listofstudent)
 		r.Get("/create", h.CreateStudet)
 		r.Post("/store", h.StoreStudent)

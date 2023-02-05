@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../dist/output.css">
+    <link rel="stylesheet" href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" />
+    <title>Student manegment</title>
+</head>
+<body>
+    <div class="w-full h-auto overflow-scroll min-h-screen bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 p-4 flex items-center justify-center" >
+        <div class="bg-white py-6 px-10 sm:max-w-5xl w-full ">
+            <div class="text-left">
+                <a href="/logout">Logout</a>
+            </div>
+            
+            <div class=" font-semibold text-center text-blue-400  mb-12">
+                <p class="sm:text-2xl text-xl"> Enter Student Information </p>
+            </div>
+            <table>
+                <thead>
+                    <tr class="border p-4">
+                        <th>Firt name</th>
+                        <th>Last name</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .}}
+                    <tr>
+                        <td class="p-4">{{ .FirstName}}</td>
+                        <td class="p-4">{{ .LastName}}</td>
+                        <td class="p-4">{{ .Username}}</td>
+                        <td class="p-4">{{ .Email}}</td>
+                        <td class="p-4">{{ if .Status}} Active {{else}} Inactive{{end}}</td>
+                        <td class="p-4 flex"><a class="px-3 py-1 rounded-full bg-gradient-to-r from-sky-600  to-teal-300 text-blue-600" href="/student/{{.ID}}/edit">Edit</a>
+                            <a class="px-3 py-1 rounded-full bg-gradient-to-r from-sky-600  to-teal-300 text-blue-600" href="/student/{{.ID}}/do">Delete</a>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+            <div class="pt-4 text-center">
+             <a class=" px-3 py-1 rounded-full bg-gradient-to-r from-sky-600  to-teal-300 text-blue-600" href="/student/create">Crete Student</a>
+
+            </div>
+        </div>
+    </div>
+    
+</body>
+</html>

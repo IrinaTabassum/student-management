@@ -61,7 +61,7 @@ func (h Handler) LoginPostHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if pass != "secret" {
+	if pass != "1" {
 		pareseloginTemplate(w, LoginStudent{
 			Username: un,
 			Password: "",
