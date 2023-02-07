@@ -1,86 +1,82 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"student-management/storage"
 
 	"text/template"
 
 	"github.com/go-chi/chi"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
 	"github.com/justinas/nosurf"
 )
 
 func (h Handler) EditStudent(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-
-	var editStudent Student
-	const editStudentQuery = `SELECT * FROM students WHERE id=$1 AND deleted_at IS NULL`
-	if err := h.db.Get(&editStudent, editStudentQuery, id); err != nil {
-		log.Fatal(err)
+	sID, err := strconv.Atoi(id)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+	
+	editStudent, err := h.stroage.GetStudentByID(sID)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 
-	editStudent.CSRFToken = nosurf.Token(r)
-	pareseEditUserTemplate(w, editStudent)
+	var form StudentForm 
+	form.Student = *editStudent
+	
+	form.CSRFToken = nosurf.Token(r)
+	pareseEditUserTemplate(w, form)
 
 }
 func (h Handler) UpdateStudent(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	sID, err := strconv.Atoi(id)
 	if err != nil {
-		log.Fatalf("%v", err)
+		log.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 	if err := r.ParseForm(); err != nil {
-		log.Fatalf("%#v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 
-	editstudent := Student{ID: sID}
-
+	editstudent :=storage.Student{ID: sID}
+	var form StudentForm 
 	if err := h.decoder.Decode(&editstudent, r.PostForm); err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 	
 	log.Printf("form: %+v \n", editstudent)
-
+    form.Student = editstudent
+	
 	if err := editstudent.Validate(); err != nil {
 		if vErr, ok := err.(validation.Errors); ok {
 			newErrs := make(map[string]error)
 			for key, val := range vErr {
 				newErrs[strings.Title(key)] = val
 			}
-			editstudent.FormError = newErrs
+			form.FormError = newErrs
 		}
-		pareseCreateStudentTemplate(w, editstudent)
+		pareseCreateStudentTemplate(w, form)
 		return
 	}
-	const updatStudenrQuery =`
-	UPDATE students SET
-		first_name = :first_name,
-		last_name = :last_name,
-		status = :status
-	WHERE id = :id AND deleted_at IS NULL;
-	`
-	stud, err := h.db.PrepareNamed(updatStudenrQuery)
-	if err != nil{
-		log.Fatal(err)
+	
+	updateStudent, err := h.stroage.UpdateStudent(editstudent)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
-	res, err := stud.Exec(editstudent)
-	if err != nil{
-		log.Fatal(err)
-	}
-	rocount, err := res.RowsAffected()
-	if err != nil{
-		log.Fatal(err)
-	}
+	 
 
-	if rocount >0 {
-		http.Redirect(w, r, "/student/list", http.StatusSeeOther)
-		return
-	}
-
-	pareseCreateStudentTemplate(w, editstudent)
+	http.Redirect(w, r, fmt.Sprintf("/student/%v/edit", updateStudent.ID) , http.StatusSeeOther)
 
 }
 func pareseEditUserTemplate(w http.ResponseWriter, data any) {

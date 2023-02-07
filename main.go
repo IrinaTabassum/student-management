@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"strings"
 	"student-management/handler"
+	"student-management/storage/postgres"
 	"time"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form"
-	"github.com/jmoiron/sqlx"
+
 	"github.com/justinas/nosurf"
 	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
@@ -60,19 +61,11 @@ func main() {
 
 	decoder := form.NewDecoder()
 	
-	db, err := sqlx.Connect("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		config.GetString("database.host"),
-		config.GetString("database.port"),
-		config.GetString("database.user"),
-		config.GetString("database.password"),
-		config.GetString("database.dbname"),
-		config.GetString("database.sslmode"),
-	))
-	if err != nil {
+	postgresStore, err := postgres.NewPostgresStorage(config)
+	if err != nil{
 		log.Fatalln(err)
 	}
-
-	res := db.MustExec(schema)
+	res := postgresStore.DB.MustExec(schema)
 	row, err := res.RowsAffected()
 	if err != nil {
 		log.Fatalln(err)
@@ -90,10 +83,10 @@ func main() {
 	sessionManager.Cookie.Name = "web-session"
 	sessionManager.Cookie.HttpOnly = true
 	sessionManager.Cookie.Secure = true
-	sessionManager.Store = NewSQLXStore(db)
+	sessionManager.Store = NewSQLXStore(postgresStore.DB)
 	
 
-	chi := handler.NewHandler(sessionManager, decoder, db)
+	chi := handler.NewHandler(sessionManager, decoder, postgresStore)
 	p := config.GetInt("server.port")
 	newChi := nosurf.New(chi)
 

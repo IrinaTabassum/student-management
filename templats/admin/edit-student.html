@@ -14,7 +14,7 @@
             <div class="sm:text-2xl text-xl font-semibold text-center text-blue-400  mb-12">
                 Edit Student
             </div>
-            <form action="/student/{{ .ID }}/update" method="POST">
+            <form action="/student/{{ .Student.ID }}/update" method="POST">
                 <input type="hidden" name="_method" value="PUT">
                 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
                 {{template "_form.html" .}}
@@ -24,6 +24,7 @@
                     </button>
                 </div>
             </form>
+            <a href="/student/list">Go to Student List</a>
         </div>
     </div>
     

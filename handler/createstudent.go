@@ -1,9 +1,10 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"student-management/storage"
+
+
 	"log"
 	"net/http"
 	"strings"
@@ -14,64 +15,46 @@ import (
 )
 
 func (h Handler) CreateStudet(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("create\n\n")
-	pareseCreateStudentTemplate(w, Student{
+	pareseCreateStudentTemplate(w, StudentForm{
 		CSRFToken: nosurf.Token(r),
 	})
 }
 
 func (h Handler) StoreStudent(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		log.Fatalf("%#v", err)
+		log.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
-
-	student := Student{}
+	form := StudentForm{}
+	student := storage.Student{}
 	if err := h.decoder.Decode(&student, r.PostForm); err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 	log.Printf("form: %+v \n", student)
+	form.Student=student
 
 	if err := student.Validate(); err != nil {
 		if vErr, ok := err.(validation.Errors); ok {
+			newErrs := make(map[string]error)
 			for key, val := range vErr {
-				student.FormError[strings.Title(key)] = val
+				newErrs[strings.Title(key)] = val
 			}
-
+			form.FormError = newErrs
 		}
-		pareseCreateStudentTemplate(w, student)
+		pareseCreateStudentTemplate(w, form)
 		return
 	}
-	const insertSQuery = `
-	INSERT INTO students(
-		first_name,
-		last_name,
-		username,
-		email,
-		password
-	) VALUES (
-		:first_name,
-		:last_name,
-		:username,
-		:email,
-		:password
-	) RETURNING id;	
-	`
-	stmt, err := h.db.PrepareNamed(insertSQuery)
+	
+	storStudent, err := h.stroage.CreateStudent(student)
 	if err != nil {
-		log.Fatal(err)
-	}
-	var sid int
-	err = stmt.Get(&sid, student)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if sid == 0 {
-		log.Fatalln("unable to insert student")
+		log.Println(err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
 
-	http.Redirect(w, r, "/student/create", http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/student/%v/edit", storStudent.ID) , http.StatusSeeOther)
 }
-
+  
 func pareseCreateStudentTemplate(w http.ResponseWriter, data any) {
 	t := template.New("create Student")
 	t = template.Must(t.ParseFiles("templats/admin/create-student.html", "templats/admin/_form.html"))
@@ -80,15 +63,4 @@ func pareseCreateStudentTemplate(w http.ResponseWriter, data any) {
 	}
 
 }
-func writeUsersToFile(SL *StudentsList) error {
-	jsonContent, err := json.MarshalIndent(SL, " ", "  ")
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile("data.json", jsonContent, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+ 

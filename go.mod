@@ -11,6 +11,7 @@ require (
 	github.com/justinas/nosurf v1.1.1
 	github.com/lib/pq v1.2.0
 	github.com/spf13/viper v1.15.0
+	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 )
 
 require (

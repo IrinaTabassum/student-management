@@ -5,25 +5,33 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"student-management/storage"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-playground/form"
-	"github.com/jmoiron/sqlx"
 )
 
 type Handler struct {
 	sessionManager *scs.SessionManager
 	decoder        *form.Decoder
-	db             *sqlx.DB
+	stroage         dbStorage
 }
 
-func NewHandler(sm *scs.SessionManager, formDecoder *form.Decoder, db *sqlx.DB) *chi.Mux {
+  type dbStorage interface{
+	ListofStudent() ([]storage.Student, error) 
+	CreateStudent(s storage.Student) (*storage.Student, error)
+	UpdateStudent(s storage.Student) (*storage.Student, error) 
+	GetStudentByID(id int) (*storage.Student, error)
+	DeleteStudentByID(id int) error
+  }
+
+func NewHandler(sm *scs.SessionManager, formDecoder *form.Decoder, stroage dbStorage) *chi.Mux {
 	h := &Handler{
 		sessionManager: sm,
 		decoder:        formDecoder,
-		db:             db,
+		stroage : stroage,
 	}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
