@@ -1,77 +1,92 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
+	"student-management/storage/postgres"
 	"text/template"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/justinas/nosurf"
+	"golang.org/x/crypto/bcrypt"
 )
-
-type LoginFormError struct {
-	Username string
-	Password string
-	UserPass string
-}
 
 type LoginStudent struct {
 	Username  string
 	Password  string
-	FormError LoginFormError
+	FormError map[string]error
 	CSRFToken string
+}
+
+func (ls LoginStudent) Validate() error {
+	return validation.ValidateStruct(&ls,
+		validation.Field(&ls.Username,
+			validation.Required.Error("The username field is required."),
+		),
+		validation.Field(&ls.Password,
+			validation.Required.Error("The password field is required."),
+		),
+	)
 }
 
 func (h Handler) Login(w http.ResponseWriter, r *http.Request) {
 	pareseloginTemplate(w, LoginStudent{
-
 		CSRFToken: nosurf.Token(r),
 	})
 }
 func (h Handler) LoginPostHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 	}
-	un := r.PostFormValue("Username")
-	pass := r.PostFormValue("Password")
-	if un == "" {
-		pareseloginTemplate(w, LoginStudent{
-			Username: un,
-			FormError: LoginFormError{
-				Username: "The username is required.",
-			},
-		})
+	var loginStudent LoginStudent
+	if err := h.decoder.Decode(&loginStudent, r.PostForm); err != nil {
+		log.Println(err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
+	if err := loginStudent.Validate(); err != nil {
+		if vErr, ok := err.(validation.Errors); ok {
+			formErr := make(map[string]error)
+			for key, val := range vErr {
+				formErr[strings.Title(key)] = val
+			}
+			loginStudent.FormError = formErr
+			loginStudent.Password = ""
+			loginStudent.CSRFToken = nosurf.Token(r)
+			pareseloginTemplate(w, loginStudent)
+			return
+		}
+	}
+	getStudent, err := h.stroage.GetStudentByUsername(loginStudent.Username)
+
+	if err != nil {
+		if err.Error() == postgres.NotFound {
+			formErr := make(map[string]error)
+			formErr["Username"] = fmt.Errorf("credentials does not match")
+			loginStudent.FormError = formErr
+			loginStudent.CSRFToken = nosurf.Token(r)
+			loginStudent.Password = ""
+			pareseloginTemplate(w, loginStudent)
+			return
+		}
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	if pass == "" {
-		pareseloginTemplate(w, LoginStudent{
-			Username: un,
-			FormError: LoginFormError{
-				Password: "The password is required.",
-			},
-		})
+
+	if err := bcrypt.CompareHashAndPassword([]byte(getStudent.Password), []byte(loginStudent.Password)); err != nil {
+		formErr := make(map[string]error)
+		formErr["Username"] = fmt.Errorf("credentials does not match")
+		loginStudent.FormError = formErr
+		loginStudent.CSRFToken = nosurf.Token(r)
+		loginStudent.Password = ""
+		pareseloginTemplate(w, loginStudent)
 		return
 	}
-	if un != "admin" {
-		pareseloginTemplate(w, LoginStudent{
-			Username: un,
-			Password: "",
-			FormError: LoginFormError{
-				UserPass: "Incurrect user name or password",
-			},
-		})
-		return
-	}
-	if pass != "1" {
-		pareseloginTemplate(w, LoginStudent{
-			Username: un,
-			Password: "",
-			FormError: LoginFormError{
-				UserPass: "Incurrect user name or password",
-			},
-		})
-		return
-	}
-	h.sessionManager.Put(r.Context(), "username", un)
+
+	h.sessionManager.Put(r.Context(), "studentID", strconv.Itoa(getStudent.ID))
 
 	http.Redirect(w, r, "/student/list", http.StatusSeeOther)
 

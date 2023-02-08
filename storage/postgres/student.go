@@ -52,7 +52,7 @@ func (ps PostgresStorage) CreateStudent(s storage.Student) (*storage.Student, er
 		return nil, err
 	}
 	if s.ID == 0 {
-		return nil, fmt.Errorf("Unable to insert")
+		return nil, fmt.Errorf("unable to insert")
 	}
 
 	return &s, nil
@@ -115,4 +115,16 @@ func (ps PostgresStorage) DeleteStudentByID(id int) error {
 		return fmt.Errorf("unable to delate student")
 	}
 	return nil
+}
+
+const getStudentByUsernameQuery = `SELECT * FROM students  WHERE username=$1 AND deleted_at IS NULL`
+
+func (ps PostgresStorage) GetStudentByUsername(username string) (*storage.Student, error) {
+	var s storage.Student
+	if err := ps.DB.Get(&s, getStudentByUsernameQuery, username); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return &s, nil
 }

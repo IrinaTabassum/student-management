@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"student-management/storage"
 
@@ -20,6 +22,7 @@ type Handler struct {
 }
 
   type dbStorage interface{
+	GetStudentByUsername(username string) (*storage.Student, error)
 	ListofStudent() ([]storage.Student, error) 
 	CreateStudent(s storage.Student) (*storage.Student, error)
 	UpdateStudent(s storage.Student) (*storage.Student, error) 
@@ -87,8 +90,14 @@ func Method(next http.Handler) http.Handler {
 }
 func (h Handler) Authentication(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		username := h.sessionManager.GetString(r.Context(), "username")
-		if username == "" {
+		studentID := h.sessionManager.GetString(r.Context(), "studentID")
+		sID, err := strconv.Atoi(studentID)
+		if err != nil {
+			log.Println(err)
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		if sID <= 0 {
 			// http.Error(w, "unauthorized", http.StatusUnauthorized)
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return

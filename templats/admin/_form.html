@@ -1,31 +1,32 @@
-<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-<label for="first_name">First Name</label>
-<input id="first_name" type="text" name="FirstName" value="{{.Student.FirstName}}">
-{{ with (index .FormError "FirstName") }}
-<p style="color: red;">{{.}}</p>
-{{end}}
-<br>
 
-<label for="last_name">Last Name</label>
-<input id="last_name" type="text" name="LastName" value="{{.Student.LastName}}">
+<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+<label class = "py-1" for="last_name">First Name</label>
+<input id="first_name" type="text" name="FirstName" value="{{.Student.FirstName}}" placeholder="First Name" class="focus:outline-none border rounded-md w-full p-2 border-sky-400 placeholder-gray-300">
+{{ with (index .FormError "FirstName") }}
+<p class = "text-red-500 py-1">{{.}}</p>
+{{end}}
+
+
+<label class = "py-1" for="last_name">Last Name</label>
+<input id="last_name" type="text" name="LastName" value="{{.Student.LastName}}" placeholder="Last Name" class="focus:outline-none border rounded-md w-full p-2 border-sky-400 placeholder-gray-300">
 {{ with (index .FormError "LastName") }}
-<p style="color: red;">{{.}}</p>
+<p class = "text-red-500 py-1">{{.}}</p>
 {{end}}
-<br>
-<label for="email">Email</label>
-<input id="email" type="email" name="Email" value="{{.Student.Email}}" {{if .Student.ID}} readonly{{end}}>
+
+<label class = "py-1" for="email">Email</label>
+<input id="email" type="email" name="Email" value="{{.Student.Email}}" {{if .Student.ID}} readonly{{end}} placeholder="Email" class="focus:outline-none border rounded-md w-full p-2 border-sky-400 placeholder-gray-300">
 {{ with (index .FormError "Email") }}
-<p style="color: red;">{{.}}</p>
+<p class = "text-red-500 py-1">{{.}}</p>
 {{end}}
-<br>
-<label for="username">Username</label>
-    <input id="username" type="text" name="Username" value="{{.Student.Username}}" {{if .Student.ID}} readonly{{end}}>
+
+<label class = "py-1" for="username">Username</label>
+    <input id="username" type="text" name="Username" value="{{.Student.Username}}" {{if .Student.ID}} readonly{{end}} placeholder="Username" class="focus:outline-none border rounded-md w-full p-2 border-sky-400 placeholder-gray-300">
     {{ with (index .FormError "Username") }}
-    <p style="color: red;">{{.}}</p>
+    <p class = "text-red-500 py-1">{{.}}</p>
     {{end}}
-    <br>
+    
 {{if gt .Student.ID 0}}
-    <label for="status">Status</label>
+    <label class = "py-1" for="status">Status</label>
     <br>
     <label for="active">
     <input id="status" type="radio" name="Status" value="true" {{if .Student.Status}} checked{{end}}>
@@ -34,17 +35,17 @@
         <input id="status" type="radio" name="Status" value="false" {{if not .Student.Status}} checked{{end}}>
         Inactive</label>
     {{ with (index .FormError "Status") }}
-    <p style="color: red;">{{.}}</p>
+    <p class = "text-red-500 py-1">{{.}}</p>
     {{end}}
-<br>
+
 {{end}}
 
 
 {{if eq .Student.ID 0}}
-    <label for="password">Password</label>
-    <input id="password" type="password" name="Password" value="">
+    <label class = "py-1" for="password">Password</label>
+    <input id="password" type="password" name="Password" value="" placeholder="Password" class="focus:outline-none border rounded-md w-full p-2 border-sky-400 placeholder-gray-300 placeholder-text-sm">
     {{ with (index .FormError "Password") }}
-    <p style="color: red;">{{.}}</p>
+    <p class = "text-red-500 py-1">{{.}}</p>
     {{end}}
-    <br>
+    
 {{end}}

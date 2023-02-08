@@ -8,6 +8,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	NotFound = "sql: no rows in result set"
+)
+
 type PostgresStorage struct {
 	DB  *sqlx.DB
 }
